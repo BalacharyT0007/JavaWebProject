@@ -1,41 +1,42 @@
-name: Build and Deploy to Tomcat (Windows)
+name: Build and Deploy Java App to Tomcat (Windows)
 
 on:
   push:
     branches:
-      - main  # Adjust if your default branch is different
+      - main
 
 jobs:
-  build:
+  build-and-deploy:
     runs-on: windows-latest
 
     env:
       TOMCAT_HOST: localhost
       TOMCAT_PORT: 8082
-      DEPLOY_PATH: /DemoProject
+      WAR_FILE: DemoProject.war
 
     steps:
-    - name: Checkout repository
-      uses: actions/checkout@v3
+      - name: Checkout Code
+        uses: actions/checkout@v3
 
-    - name: Set up JDK
-      uses: actions/setup-java@v3
-      with:
-        java-version: '17'  # Change to your version
-        distribution: 'temurin'
+      - name: Set up Java
+        uses: actions/setup-java@v3
+        with:
+          distribution: 'temurin'
+          java-version: '11'
 
-    - name: Build with Maven
-      run: mvn clean package --file pom.xml
+      - name: Build with Maven
+        run: mvn clean package
 
-    - name: Deploy WAR to Tomcat
-      run: |
-        $ErrorActionPreference = "Stop"
-        $securePassword = ConvertTo-SecureString "${{ secrets.TOMCAT_PASSWORD }}" -AsPlainText -Force
-        $credential = New-Object System.Management.Automation.PSCredential("${{ secrets.TOMCAT_USER }}", $securePassword)
+      - name: Deploy WAR to Tomcat
+        run: |
+          $ErrorActionPreference = "Stop"
 
-        Invoke-RestMethod -Uri "http://$env:TOMCAT_HOST:$env:TOMCAT_PORT/manager/text/deploy?path=$env:DEPLOY_PATH&update=true" `
-          -Method Post `
-          -Credential $credential `
-          -InFile "target/DemoProject.war" `
-          -ContentType "application/octet-stream"
-      shell: pwsh
+          $secpasswd = ConvertTo-SecureString "${{ secrets.TOMCAT_PASSWORD }}" -AsPlainText -Force
+          $creds = New-Object System.Management.Automation.PSCredential("${{ secrets.TOMCAT_USERNAME }}", $secpasswd)
+
+          Invoke-RestMethod -Uri "http://$env:TOMCAT_HOST:$env:TOMCAT_PORT/manager/text/deploy?path=/DemoProject&update=true" `
+            -Method PUT `
+            -InFile "target\$env:WAR_FILE" `
+            -Credential $creds `
+            -AllowUnencryptedAuthentication
+        shell: pwsh
