@@ -34,7 +34,7 @@ jobs:
           $secpasswd = ConvertTo-SecureString "${{ secrets.TOMCAT_PASSWORD }}" -AsPlainText -Force
           $creds = New-Object System.Management.Automation.PSCredential("${{ secrets.TOMCAT_USERNAME }}", $secpasswd)
 
-          Invoke-RestMethod -Uri "http://$env:TOMCAT_HOST:$env:TOMCAT_PORT/manager/text/deploy?path=/DemoProject&update=true" `
+          Invoke-RestMethod -Uri "http://$env:TOMCAT_HOST:$env:8082/manager/text/deploy?path=/DemoProject&update=true" `
             -Method PUT `
             -InFile "target\$env:WAR_FILE" `
             -Credential $creds `
