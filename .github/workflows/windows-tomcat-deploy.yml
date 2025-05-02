@@ -1,0 +1,41 @@
+name: Build and Deploy to Tomcat (Windows)
+
+on:
+  push:
+    branches:
+      - main  # Adjust if your default branch is different
+
+jobs:
+  build:
+    runs-on: windows-latest
+
+    env:
+      TOMCAT_HOST: localhost
+      TOMCAT_PORT: 8082
+      DEPLOY_PATH: /DemoProject
+
+    steps:
+    - name: Checkout repository
+      uses: actions/checkout@v3
+
+    - name: Set up JDK
+      uses: actions/setup-java@v3
+      with:
+        java-version: '17'  # Change to your version
+        distribution: 'temurin'
+
+    - name: Build with Maven
+      run: mvn clean package --file pom.xml
+
+    - name: Deploy WAR to Tomcat
+      run: |
+        $ErrorActionPreference = "Stop"
+        $securePassword = ConvertTo-SecureString "${{ secrets.TOMCAT_PASSWORD }}" -AsPlainText -Force
+        $credential = New-Object System.Management.Automation.PSCredential("${{ secrets.TOMCAT_USER }}", $securePassword)
+
+        Invoke-RestMethod -Uri "http://$env:TOMCAT_HOST:$env:TOMCAT_PORT/manager/text/deploy?path=$env:DEPLOY_PATH&update=true" `
+          -Method Post `
+          -Credential $credential `
+          -InFile "target/DemoProject.war" `
+          -ContentType "application/octet-stream"
+      shell: pwsh
